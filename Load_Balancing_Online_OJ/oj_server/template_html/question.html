@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{number}}.{{title}}</title>
+    <!-- 引入ACE插件 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.2.6/ace.js" type="text/javascript" charset="utf-8"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.2.6/ext-language_tools.js" type="text/javascript" charset="utf-8"></script>
+    <script src="http://code.jquery.com/jquery-2.1.1.min.js"></script>
+
+    <style>
+        /* 清除默认样式 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f4;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* 导航栏样式 */
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #333;
+            padding: 0 20px;
+            height: 60px;
+        }
+
+        /* 左侧导航菜单 */
+        .navbar-left {
+            display: flex;
+        }
+
+        .navbar-left a {
+            color: white;
+            font-size: 18px;
+            text-decoration: none;
+            padding: 14px 20px;
+            transition: background-color 0.3s ease;
+        }
+
+        .navbar-left a:hover {
+            background-color: #4CAF50;
+            border-radius: 4px;
+        }
+
+        /* 右侧登录按钮 */
+        .navbar-right .login {
+            color: white;
+            font-size: 18px;
+            text-decoration: none;
+            padding: 14px 20px;
+            background-color: #4CAF50;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+        }
+
+        .navbar-right .login:hover {
+            background-color: #45a049;
+        }
+
+        /* 左右呈现，题目描述和预设代码 */
+        .part1 {
+            display: flex;
+            flex: 1;
+            margin-top: 10px;
+            padding: 20px;
+        }
+
+        .left_desc {
+            flex: 1;
+            padding: 20px;
+            background-color: #ecf0f1;
+            overflow-y: auto;
+        }
+
+        .left_desc h3 {
+            font-size: 22px;
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+
+        .left_desc pre {
+            font-size: 16px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+
+        .right_code {
+            flex: 1;
+            padding: 20px;
+            background-color: #ecf0f1;
+        }
+
+        .right_code .ace_editor {
+            width: 100%;
+            height: 100%;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+        }
+
+        /* 提交代码和显示结果 */
+        .part2 {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background-color: #f4f4f4;
+        }
+
+        .result {
+            flex: 1;
+            margin-right: 20px;
+        }
+
+        .btn-submit {
+            width: 120px;
+            height: 50px;
+            background-color: #26bb9c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .btn-submit:hover {
+            background-color: #1abc9c;
+        }
+
+        .result pre {
+            font-size: 16px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- 导航栏 -->
+        <div class="navbar">
+            <!-- 左侧导航链接 -->
+            <div class="navbar-left">
+                <a href="/">首页</a>
+                <a href="/all_questions">题库</a>
+                <a href="#">竞赛</a>
+                <a href="#">讨论</a>
+                <a href="#">求职</a>
+            </div>
+            <!-- 右侧登录按钮 -->
+            <div class="navbar-right">
+                <a class="login" href="#">登录</a>
+            </div>
+        </div>
+
+        <!-- 左右呈现，题目描述和预设代码 -->
+        <div class="part1">
+            <div class="left_desc">
+                <h3><span id="number">{{number}}</span>. {{title}} - {{level}}</h3>
+                <pre>{{desc}}</pre>
+            </div>
+            <div class="right_code">
+                <pre id="code" class="ace_editor"><textarea class="ace_text-input">{{pre_code}}</textarea></pre>
+            </div>
+        </div>
+
+        <!-- 提交并显示结果 -->
+        <div class="part2">
+            <div class="result"></div>
+            <button class="btn-submit" onclick="submit()">提交代码</button>
+        </div>
+    </div>
+
+    <script>
+        var editor = ace.edit("code");
+        editor.setTheme("ace/theme/monokai");
+        editor.session.setMode("ace/mode/c_cpp");
+        editor.setFontSize(16);
+        editor.getSession().setTabSize(4);
+        editor.setReadOnly(false);
+
+        ace.require("ace/ext/language_tools");
+        editor.setOptions({
+            enableBasicAutocompletion: true,
+            enableSnippets: true,
+            enableLiveAutocompletion: true
+        });
+
+        function submit() {
+            var code = editor.getSession().getValue();
+            var number = $("#number").text();
+            var judge_url = "/judge/" + number;
+
+            $.ajax({
+                method: 'POST',
+                url: judge_url,
+                dataType: 'json',
+                contentType: 'application/json;charset=utf-8',
+                data: JSON.stringify({
+                    'code': code,
+                    'input': ''
+                }),
+                success: function (data) {
+                    show_result(data);
+                }
+            });
+
+            function show_result(data) {
+                var result_div = $(".container .part2 .result");
+                result_div.empty();
+
+                var reason_label = $("<p>", {
+                    text: data.reason
+                });
+                reason_label.appendTo(result_div);
+
+                if (data.status == 0) {
+                    var stdout_label = $("<pre>", {
+                        text: data.stdout
+                    });
+                    var stderr_label = $("<pre>", {
+                        text: data.stderr
+                    });
+
+                    stdout_label.appendTo(result_div);
+                    stderr_label.appendTo(result_div);
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>

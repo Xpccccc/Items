@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>在线OJ-题目列表</title>
+    <style>
+        /* 清除默认样式 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body,
+        html {
+            font-family: 'Arial', sans-serif;
+            height: 100%;
+            background: linear-gradient(to right, #eef2f3, #8e9eab);
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* 导航栏样式 */
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #333;
+            padding: 0 20px;
+            height: 60px;
+        }
+
+        /* 左侧导航菜单 */
+        .navbar-left {
+            display: flex;
+        }
+
+        .navbar-left a {
+            color: white;
+            font-size: 18px;
+            text-decoration: none;
+            padding: 14px 20px;
+            transition: background-color 0.3s ease;
+        }
+
+        .navbar-left a:hover {
+            background-color: #4CAF50;
+            border-radius: 4px;
+        }
+
+        /* 右侧登录按钮 */
+        .navbar-right .login {
+            color: white;
+            font-size: 18px;
+            text-decoration: none;
+            padding: 14px 20px;
+            background-color: #4CAF50;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+        }
+
+        .navbar-right .login:hover {
+            background-color: #45a049;
+        }
+
+        /* 题目列表 */
+        .question_list {
+            flex: 1;
+            padding: 50px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .question_list h1 {
+            font-size: 36px;
+            color: #333;
+            margin-bottom: 30px;
+        }
+
+        /* 表格样式 */
+        table {
+            width: 80%;
+            border-collapse: collapse;
+            background-color: white;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        th,
+        td {
+            padding: 15px;
+            text-align: center;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #4CAF50;
+            color: white;
+            font-size: 18px;
+        }
+
+        tr:hover {
+            background-color: #f2f2f2;
+        }
+
+        .item a {
+            color: #333;
+            text-decoration: none;
+            transition: color 0.3s ease, text-decoration 0.3s ease;
+        }
+
+        .item a:hover {
+            color: #4CAF50;
+            text-decoration: underline;
+        }
+
+        /* 页脚 */
+        .footer {
+            height: 50px;
+            background-color: #333;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .footer h4 {
+            margin: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- 导航栏 -->
+        <div class="navbar">
+            <!-- 左侧导航链接 -->
+            <div class="navbar-left">
+                <a href="/">首页</a>
+                <a href="/all_questions">题库</a>
+                <a href="#">竞赛</a>
+                <a href="#">讨论</a>
+                <a href="#">求职</a>
+            </div>
+            <!-- 右侧登录按钮 -->
+            <div class="navbar-right">
+                <a class="login" href="#">登录</a>
+            </div>
+        </div>
+
+        <!-- 题目列表 -->
+        <div class="question_list">
+            <h1>OnlineJudge 题目列表</h1>
+            <table>
+                <tr>
+                    <th class="item">编号</th>
+                    <th class="item">标题</th>
+                    <th class="item">难度</th>
+                </tr>
+                {{#question_list}}
+                <tr>
+                    <td class="item">{{number}}</td>
+                    <td class="item"><a href="/question/{{number}}">{{title}}</a></td>
+                    <td class="item">{{level}}</td>
+                </tr>
+                {{/question_list}}
+            </table>
+        </div>
+
+        <!-- 页脚 -->
+        <div class="footer">
+            <h4>@Xpccccc</h4>
+        </div>
+    </div>
+</body>
+
+</html>
