@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="http://code.jquery.com/jquery-2.1.1.min.js"></script>
+    <title>Boost Search Engine</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            width: 100%;
+            max-width: 800px;
+            margin: 20px;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .search {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        .search input {
+            flex: 1;
+            height: 50px;
+            padding: 0 15px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 5px 0 0 5px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        .search input:focus {
+            border-color: #4e6ef2;
+        }
+        .search button {
+            width: 150px;
+            background-color: #4e6ef2;
+            color: #fff;
+            font-size: 18px;
+            border: none;
+            border-radius: 0 5px 5px 0;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .search button:hover {
+            background-color: #3b5cd4;
+        }
+        .result .item {
+            margin-top: 20px;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .result .item a {
+            font-size: 22px;
+            color: #4e6ef2;
+            text-decoration: none;
+            word-wrap: break-word;
+        }
+        .result .item a:hover {
+            text-decoration: underline;
+        }
+        .result .item p {
+            font-size: 16px;
+            color: #555;
+            margin: 8px 0;
+        }
+        .result .item i {
+            font-size: 14px;
+            color: green;
+            word-wrap: break-word;
+        }
+        @media (max-width: 600px) {
+            .search input {
+                font-size: 14px;
+            }
+            .search button {
+                font-size: 16px;
+            }
+        }
+        .highlight {
+            color: blue; /* 修改字体颜色为蓝色 */
+            font-weight: bold; /* 可选：加粗以增强视觉效果 */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="search">
+            <input type="text" placeholder="Enter your search query">
+            <button onclick="Search()">Search</button>
+        </div>
+        <div class="result"></div>
+    </div>
+
+    <script>
+        function Search() {
+            let query = $(".search input").val().trim();
+            console.log("query = " + query);  // 检查是否正确获取了关键词
+
+            if (query.length === 0) {
+                alert("Please enter a search query.");
+                return;
+            }
+
+            // 使用 encodeURIComponent 来处理特殊字符和空格
+            let encodedQuery = encodeURIComponent(query);
+
+            $.ajax({
+                type: "GET",
+                url: "/s?word=" + encodedQuery,   // 确保关键词正确编码后拼接在URL后面
+                success: function(data) {
+                    console.log(data);      // 确保服务器返回了结果
+                    BuildHtml(data, query);
+                }
+            });
+        }
+
+        function BuildHtml(data, query) {
+            let result_container = $(".result");
+            result_container.empty();
+
+            if (!data || data.length === 0) {
+                result_container.append("<p>No results found.</p>");
+                return;
+            }
+
+            for (let elem of data) {
+                let a_label = $("<a>", {
+                    text: elem.title,
+                    href: elem.url,
+                    target: "_blank"
+                });
+
+                // 对摘要进行高亮
+                let highlighted_desc = highlightQuery(elem.desc, query);
+                let p_label = $("<p>").html(highlighted_desc);
+
+                let i_label = $("<i>", {
+                    text: elem.url
+                });
+                let div_label = $("<div>", {
+                    class: "item"
+                });
+
+                a_label.appendTo(div_label);
+                p_label.appendTo(div_label);
+                i_label.appendTo(div_label);
+                div_label.appendTo(result_container);
+            }
+        }
+
+        // 高亮关键词的函数
+        function highlightQuery(text, query) {
+            let pattern = new RegExp("(" + query.replace(/([.*+?^=!:${}()|\[\]\/\\])/g, "\\$1") + ")", "gi");
+            return text.replace(pattern, '<span class="highlight">$1</span>');
+        }
+    </script>
+</body>
+</html>
