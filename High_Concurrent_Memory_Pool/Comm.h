@@ -3,10 +3,21 @@
 #include <iostream>
 #include <assert.h>
 
-const size_t MAX_BYTES = 256 * 1024; // ThreadCache能申请的最大空间256KB
+static const size_t MAX_BYTES = 256 * 1024; // ThreadCache能申请的最大空间256KB
+static const size_t NFREE_LIST = 208;       // 自由链表个数
+
+#ifdef _WIN64
+typedef unsigned long long PageId; // 64-bit Windows系统
+#elif _WIN32
+typedef size_t PageId; // 32-bit Windows系统
+#elif __linux__
+typedef unsigned long PageId; // Linux系统，可以使用 unsigned long 或 size_t，具体取决于你的系统架构
+#else
+#error "Unknown platform"
+#endif
 
 // 取对象的前4/8个字节的位置
-void *&NextObj(void *obj)
+static void *&NextObj(void *obj)
 {
     return *(void **)obj;
 }
@@ -23,12 +34,17 @@ public:
         NextObj(obj) = _freeList; // 内存空间的4字节或者8字节直接存指针
         _freeList = obj;
     }
-    void Pop()
+    void *Pop()
     {
         assert(_freeList);
         // 头删
         void *obj = _freeList;
         _freeList = NextObj(obj);
+        return obj;
+    }
+    bool Empty()
+    {
+        return _freeList == nullptr;
     }
 
 private:
@@ -76,7 +92,96 @@ public:
         {
             return -1;
         }
+        return -2;
+    }
+
+    static size_t _Index(size_t bytes, size_t align_shift)
+    {
+        return ((bytes + (1 << align_shift - 1) >> align_shift) - 1);
+    }
+
+    static size_t Index(size_t bytes)
+    {
+        // 计算在哪个大小的哈希桶
+        int group[] = {16, 56, 56, 56};
+        if (bytes <= 128)
+        {
+            return _Index(bytes, 3);
+        }
+        else if (bytes <= 1024)
+        {
+            return _Index(bytes - 128, 4) + group[0]; // 16号之前的都用掉了
+        }
+        else if (bytes <= 8 * 1024)
+        {
+            return _Index(bytes - 1024, 7) + group[0] + group[1];
+        }
+        else if (bytes <= 64 * 1024)
+        {
+            return _Index(bytes - 8 * 1024, 10) + group[0] + group[1] + group[2];
+        }
+        else if (bytes <= 256 * 1024)
+        {
+            return _Index(bytes - 64 * 1024, 13) + group[0] + group[1] + group[2] + group[3];
+        }
+        else
+        {
+            return -1;
+        }
+    }
+};
+
+// 管理多个连续页大块内存跨度结构
+struct Span
+{
+    PageId _pageId = 0; // 页号
+    size_t _n = 0;      // 页的数量
+
+    // 双向循环链表结构
+    Span *_next = nullptr;
+    Span *_prev = nullptr;
+
+    size_t _useCount = 0;     // 切好的小块内存，分配给ThreadCache的个数
+    void *freeList = nullptr; // 切好的小块内存的自由链表
+};
+
+// 带头双向循环链表
+class SpanList
+{
+public:
+    SpanList()
+    {
+        _head = new Span;
+        _head->_next = _head;
+        _head->_next = _head;
+    }
+
+    void Insert(Span *pos, Span *newSpan)
+    {
+        assert(pos);
+        assert(newSpan);
+
+        // prev newSpan pos
+        Span *prev = pos->_prev;
+
+        prev->_next = newSpan;
+        newSpan->_prev = prev;
+        newSpan->_next = pos;
+        pos->_prev = newSpan;
+    }
+
+    void Erase(Span *pos)
+    {
+        assert(pos);
+        assert(pos != _head);
+
+        Span *prev = pos->_prev;
+        Span *next = pos->_next;
+
+        prev->_next = next;
+        next->_prev = prev;
     }
 
 private:
+    Span *_head;
 };
