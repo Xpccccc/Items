@@ -39,9 +39,9 @@ Span *CentalCache::GetOneSpan(SpanList &list, size_t size)
     }
 
     // 切完了
-    list.PushFront();// 插入到centalcache里面
+    list.PushFront(span); // 插入到centalcache里面
 
-    return nullptr;
+    return span;
 }
 
 size_t CentalCache::FetchRangeObj(void *start, void *end, size_t batchNum, size_t size)
