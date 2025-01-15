@@ -2,9 +2,12 @@
 
 #include <iostream>
 #include <assert.h>
+#include <mutex>
 
 static const size_t MAX_BYTES = 256 * 1024; // ThreadCache能申请的最大空间256KB
 static const size_t NFREE_LIST = 208;       // 自由链表个数
+static const size_t NPAGES = 128;           // PageCache里最大的页个数
+static const size_t PAGE_SHIFT = 13;        // P一页的大小是2^PAGE_SHIFT字节，即8K
 
 #ifdef _WIN64
 typedef unsigned long long PageId; // 64-bit Windows系统
@@ -42,13 +45,26 @@ public:
         _freeList = NextObj(obj);
         return obj;
     }
+
+    // 头插一段范围内存
+    void PushRange(void *start, void *end)
+    {
+        NextObj(end) = _freeList;
+        _freeList = start;
+    }
     bool Empty()
     {
         return _freeList == nullptr;
     }
 
+    size_t &MaxSize()
+    {
+        return _maxSize;
+    }
+
 private:
     void *_freeList;
+    size_t _maxSize = 1; // 每个桶都维护一个上一次要该内存大小的个数
 };
 
 // 计算对象大小的对齐映射规则
@@ -129,6 +145,35 @@ public:
             return -1;
         }
     }
+
+    // 一次threadcache从centralcache中要多少个
+    static size_t NumMoveSize(size_t size)
+    {
+        assert(size > 0);
+        // [2,512],下限2，上限512
+
+        int num = MAX_BYTES / size;
+        if (num < 2)
+        {
+            num = 2;
+        }
+        if (num > 512)
+        {
+            num = 512;
+        }
+        return num;
+    }
+
+    // 一次centalcache向pagecache要的页数
+    static size_t NumMovePage(size_t size)
+    {
+        size_t num = NumMoveSize(size);       // 先算本来要的size的个数
+        size_t nbytes = num * size;           // 要的总大小
+        size_t npages = nbytes >> PAGE_SHIFT; // PAGE_SHIFT即一页的大小是2^PAGE_SHIFT字节
+        if (npages == 0)
+            npages = 1;
+        return npages;
+    }
 };
 
 // 管理多个连续页大块内存跨度结构
@@ -141,8 +186,8 @@ struct Span
     Span *_next = nullptr;
     Span *_prev = nullptr;
 
-    size_t _useCount = 0;     // 切好的小块内存，分配给ThreadCache的个数
-    void *freeList = nullptr; // 切好的小块内存的自由链表
+    size_t _useCount = 0;      // 切好的小块内存，分配给ThreadCache的个数
+    void *_freeList = nullptr; // 切好的小块内存的自由链表
 };
 
 // 带头双向循环链表
@@ -154,6 +199,21 @@ public:
         _head = new Span;
         _head->_next = _head;
         _head->_next = _head;
+    }
+
+    void PushFront(Span *span)
+    {
+        Insert(Begin(), span);
+    }
+
+    Span *Begin()
+    {
+        return _head->_next;
+    }
+
+    Span *End()
+    {
+        return _head;
     }
 
     void Insert(Span *pos, Span *newSpan)
@@ -184,4 +244,7 @@ public:
 
 private:
     Span *_head;
+
+public:
+    std::mutex _mtx; // 桶锁
 };
