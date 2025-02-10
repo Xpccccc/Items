@@ -11,7 +11,7 @@ public:
     void DeAllocate(void *ptr, size_t size);
 
     // 从Central Cache获取内存对象
-    void *FetchFromCentarlCache(size_t index, size_t size);
+    void *FetchFromCentralCache(size_t index, size_t size);
 
 private:
     FreeList _freeLists[NFREE_LIST];

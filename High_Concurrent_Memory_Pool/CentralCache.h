@@ -3,10 +3,10 @@
 #include "Comm.h"
 
 // 整个进程只有一个centalcache，使用单例模式
-class CentalCache
+class CentralCache
 {
 public:
-    static CentalCache *GetInstance()
+    static CentralCache *GetInstance()
     {
         return &_sInst;
     }
@@ -18,9 +18,9 @@ public:
 
 private:
     SpanList _spanLists[NFREE_LIST];
-    CentalCache() {}
-    CentalCache(const CentalCache &) = delete;
+    CentralCache() {}
+    CentralCache(const CentralCache &) = delete;
 
 private:
-    static CentalCache _sInst;
+    static CentralCache _sInst;
 };

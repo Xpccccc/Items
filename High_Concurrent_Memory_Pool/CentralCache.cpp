@@ -2,9 +2,9 @@
 #include "Comm.h"
 #include "PageCache.h"
 
-CentalCache CentalCache::_sInst;
+CentralCache CentralCache::_sInst;
 
-Span *CentalCache::GetOneSpan(SpanList &list, size_t size)
+Span *CentralCache::GetOneSpan(SpanList &list, size_t size)
 {
     // 查看是否CentalCache是否有未分配的span
     Span *it = list.Begin();
@@ -19,6 +19,7 @@ Span *CentalCache::GetOneSpan(SpanList &list, size_t size)
             it = it->_next;
         }
     }
+    
 
     // 上面的while还是得锁住，因为找空闲span分配，得锁住
     // 先把centalcache的桶锁解了，这样如果其他线程用完内存还回来，不会阻塞
@@ -53,7 +54,7 @@ Span *CentalCache::GetOneSpan(SpanList &list, size_t size)
     return span;
 }
 
-size_t CentalCache::FetchRangeObj(void *start, void *end, size_t batchNum, size_t size)
+size_t CentralCache::FetchRangeObj(void *start, void *end, size_t batchNum, size_t size)
 {
     // 先看要去那个桶拿
     size_t index = SizeClass::Index(size);

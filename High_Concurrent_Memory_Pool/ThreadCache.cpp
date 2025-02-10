@@ -14,7 +14,7 @@ void *ThreadCache::Allocate(size_t size)
     else
     {
         // ThreadCache没有该大小的内存对象
-        return FetchFromCentarlCache(index, alignSize);
+        return FetchFromCentralCache(index, alignSize);
     }
 }
 void ThreadCache::DeAllocate(void *ptr, size_t size)
@@ -26,7 +26,7 @@ void ThreadCache::DeAllocate(void *ptr, size_t size)
     _freeLists[index].Push(ptr);
 }
 
-void *ThreadCache::FetchFromCentarlCache(size_t index, size_t size)
+void *ThreadCache::FetchFromCentralCache(size_t index, size_t size)
 {
     // 慢开始反馈算法
     // 1.最开始不会找centralcache一次批量要太多，可能用不完
