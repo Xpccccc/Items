@@ -20,8 +20,16 @@ Span *CentalCache::GetOneSpan(SpanList &list, size_t size)
         }
     }
 
+    // 上面的while还是得锁住，因为找空闲span分配，得锁住
+    // 先把centalcache的桶锁解了，这样如果其他线程用完内存还回来，不会阻塞
+    list._mtx.unlock();
+
     // 没有，找PageCache
+    PageCache::GetInstance()->_pageMtx.lock(); // 整体锁住
     Span *span = PageCache::GetInstance()->NewSpan(SizeClass::NumMovePage(size));
+    PageCache::GetInstance()->_pageMtx.unlock();
+
+    // 这里不需要加锁，因为还没有把span挂上cental cache
     // 当前的span的大块内存的起始地址和大小
     char *start = (char *)(span->_pageId << PAGE_SHIFT);
     size_t bytes = (span->_n) << PAGE_SHIFT;
@@ -39,6 +47,7 @@ Span *CentalCache::GetOneSpan(SpanList &list, size_t size)
     }
 
     // 切完了
+    list._mtx.unlock();   // 要挂上桶里面需要加锁，防止混乱插入拿取
     list.PushFront(span); // 插入到centalcache里面
 
     return span;

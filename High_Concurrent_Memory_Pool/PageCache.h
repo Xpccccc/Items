@@ -21,5 +21,6 @@ private:
     static PageCache _sInst; // 饿汉
 
     SpanList _spanLists[NPAGES]; // 分别有 1，2，3 ... 128 page 的span自由链表
+public:
     std::mutex _pageMtx;
 };

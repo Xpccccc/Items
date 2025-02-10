@@ -6,7 +6,7 @@
 
 static const size_t MAX_BYTES = 256 * 1024; // ThreadCache能申请的最大空间256KB
 static const size_t NFREE_LIST = 208;       // 自由链表个数
-static const size_t NPAGES = 128;           // PageCache里最大的页个数
+static const size_t NPAGES = 129;           // PageCache里最大的页个数
 static const size_t PAGE_SHIFT = 13;        // P一页的大小是2^PAGE_SHIFT字节，即8K
 
 #ifdef _WIN64
@@ -18,6 +18,38 @@ typedef unsigned long PageId; // Linux系统，可以使用 unsigned long 或 si
 #else
 #error "Unknown platform"
 #endif
+
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <sys/mman.h>
+#include <unistd.h>
+#include <fcntl.h>
+#endif
+
+#include <stdexcept> // for std::bad_alloc
+
+inline static void *SystemAlloc(size_t kpage)
+{
+#ifdef _WIN32
+    void *ptr = VirtualAlloc(0, kpage * 8 * 1024, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+#else
+    // Linux
+    void *ptr = mmap(nullptr, kpage << PAGE_SHIFT, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (ptr == MAP_FAILED)
+    {
+        // 错误处理
+        perror("mmap failed");
+        exit(EXIT_FAILURE);
+    }
+#endif
+
+    if (ptr == nullptr)
+    {
+        throw std::bad_alloc();
+    }
+    return ptr;
+}
 
 // 取对象的前4/8个字节的位置
 static void *&NextObj(void *obj)
@@ -214,6 +246,18 @@ public:
     Span *End()
     {
         return _head;
+    }
+
+    bool Empty()
+    {
+        return _head->_next == _head;
+    }
+
+    Span *PopFront()
+    {
+        Span *front = _head->_next;
+        Erase(front);
+        return front;
     }
 
     void Insert(Span *pos, Span *newSpan)
