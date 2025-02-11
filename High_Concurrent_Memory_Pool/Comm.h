@@ -7,14 +7,16 @@
 static const size_t MAX_BYTES = 256 * 1024; // ThreadCache能申请的最大空间256KB
 static const size_t NFREE_LIST = 208;       // 自由链表个数
 static const size_t NPAGES = 129;           // PageCache里最大的页个数
-static const size_t PAGE_SHIFT = 13;        // P一页的大小是2^PAGE_SHIFT字节，即8K
+static const size_t PAGE_SHIFT = 12;        // P一页的大小是2^PAGE_SHIFT字节，即8K
 
 #ifdef _WIN64
-typedef unsigned long long PageId; // 64-bit Windows系统
+typedef unsigned long long PageId;  // 64-bit Windows系统
 #elif _WIN32
-typedef size_t PageId; // 32-bit Windows系统
+typedef size_t PageId;               // 32-bit Windows系统
 #elif __linux__
-typedef unsigned long PageId; // Linux系统，可以使用 unsigned long 或 size_t，具体取决于你的系统架构
+typedef unsigned long PageId;        // Linux系统，可以使用 unsigned long 或 size_t，具体取决于你的系统架构
+#elif __APPLE__
+typedef size_t PageId;               // macOS系统，通常也使用 size_t 类型
 #else
 #error "Unknown platform"
 #endif
@@ -29,13 +31,14 @@ typedef unsigned long PageId; // Linux系统，可以使用 unsigned long 或 si
 
 #include <stdexcept> // for std::bad_alloc
 
-inline static void *SystemAlloc(size_t kpage)
+// 定长内存池
+inline static void* SystemAlloc(size_t kpage)
 {
 #ifdef _WIN32
-    void *ptr = VirtualAlloc(0, kpage * 8 * 1024, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    void* ptr = VirtualAlloc(0, kpage * 8 * 1024, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 #else
-    // Linux
-    void *ptr = mmap(nullptr, kpage << PAGE_SHIFT, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    // Linux or macOS
+    void* ptr = mmap(nullptr, kpage * 4 * 1024, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (ptr == MAP_FAILED)
     {
         // 错误处理
@@ -50,6 +53,7 @@ inline static void *SystemAlloc(size_t kpage)
     }
     return ptr;
 }
+
 
 // 取对象的前4/8个字节的位置
 static void *&NextObj(void *obj)
@@ -103,79 +107,72 @@ private:
 class SizeClass
 {
 public:
-    static size_t _RoundUp(size_t size, size_t alignNum)
+    static inline size_t _RoundUp(size_t bytes, size_t alignNum)
     {
-        return ((size + alignNum - 1) & ~(alignNum - 1));
+        return ((bytes + alignNum - 1) & ~(alignNum - 1));
     }
 
-    static size_t RoundUp(size_t size)
+    static inline size_t RoundUp(size_t size)
     {
-        // 整体控制在10%左右的空间浪费
-        // [1,128]                  8byte对齐               freeList[0,16)
-        // [128+1,1024]             16byte对齐              freeList[16,72)
-        // [1024+1,8*1024]          128byte对齐             freeList[72,128)
-        // [8*1024+1,64*1024]       1024byte对齐            freeList[128,184)
-        // [64*1024+1,256*1024]     8*1024byte对齐          freeList[184,208)
         if (size <= 128)
         {
-            _RoundUp(size, 8);
+            return _RoundUp(size, 8);
         }
         else if (size <= 1024)
         {
-            _RoundUp(size, 16);
+            return _RoundUp(size, 16);
         }
-        else if (size <= 8 * 1024)
+        else if (size <= 8*1024)
         {
-            _RoundUp(size, 128);
+            return _RoundUp(size, 128);
         }
-        else if (size <= 64 * 1024)
+        else if (size <= 64*1024)
         {
-            _RoundUp(size, 1024);
+            return _RoundUp(size, 1024);
         }
         else if (size <= 256 * 1024)
         {
-            _RoundUp(size, 8 * 1024);
+            return _RoundUp(size, 8*1024);
         }
         else
         {
+            assert(false);
             return -1;
         }
-        return -2;
     }
 
-    static size_t _Index(size_t bytes, size_t align_shift)
+    static inline size_t _Index(size_t bytes, size_t align_shift)
     {
-        return ((bytes + (1 << align_shift - 1) >> align_shift) - 1);
+        return ((bytes + (1 << align_shift) - 1) >> align_shift) - 1;
     }
 
-    static size_t Index(size_t bytes)
+    // 计算映射的哪一个自由链表桶
+    static inline size_t Index(size_t bytes)
     {
-        // 计算在哪个大小的哈希桶
-        int group[] = {16, 56, 56, 56};
-        if (bytes <= 128)
-        {
+        assert(bytes <= MAX_BYTES);
+
+        // 每个区间有多少个链
+        static int group_array[4] = { 16, 56, 56, 56 };
+        if (bytes <= 128){
             return _Index(bytes, 3);
         }
-        else if (bytes <= 1024)
-        {
-            return _Index(bytes - 128, 4) + group[0]; // 16号之前的都用掉了
+        else if (bytes <= 1024){
+            return _Index(bytes - 128, 4) + group_array[0];
         }
-        else if (bytes <= 8 * 1024)
-        {
-            return _Index(bytes - 1024, 7) + group[0] + group[1];
+        else if (bytes <= 8 * 1024){
+            return _Index(bytes - 1024, 7) + group_array[1] + group_array[0];
         }
-        else if (bytes <= 64 * 1024)
-        {
-            return _Index(bytes - 8 * 1024, 10) + group[0] + group[1] + group[2];
+        else if (bytes <= 64 * 1024){
+            return _Index(bytes - 8 * 1024, 10) + group_array[2] + group_array[1] + group_array[0];
         }
-        else if (bytes <= 256 * 1024)
-        {
-            return _Index(bytes - 64 * 1024, 13) + group[0] + group[1] + group[2] + group[3];
+        else if (bytes <= 256 * 1024){
+            return _Index(bytes - 64 * 1024, 13) + group_array[3] + group_array[2] + group_array[1] + group_array[0];
         }
-        else
-        {
-            return -1;
+        else{
+            assert(false);
         }
+
+        return -1;
     }
 
     // 一次threadcache从centralcache中要多少个
@@ -229,7 +226,7 @@ public:
     SpanList()
     {
         _head = new Span;
-        _head->_next = _head;
+        _head->_prev = _head;
         _head->_next = _head;
     }
 

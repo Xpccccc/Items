@@ -14,7 +14,7 @@ public:
     // 获取一个非空span
     Span *GetOneSpan(SpanList &list, size_t size);
 
-    size_t FetchRangeObj(void *start, void *end, size_t batchNum, size_t size);
+    size_t FetchRangeObj(void *&start, void *&end, size_t batchNum, size_t size);
 
 private:
     SpanList _spanLists[NFREE_LIST];

@@ -40,7 +40,7 @@ void *ThreadCache::FetchFromCentralCache(size_t index, size_t size)
     }
     void *start = nullptr;
     void *end = nullptr;
-    size_t acturalNum = CentalCache::GetInstance()->FetchRangeObj(start, end, batchNum, size); // 实际给的个数
+    size_t acturalNum = CentralCache::GetInstance()->FetchRangeObj(start, end, batchNum, size); // 实际给的个数
 
     assert(acturalNum > 0);
 
@@ -54,6 +54,4 @@ void *ThreadCache::FetchFromCentralCache(size_t index, size_t size)
         _freeLists[index].PushRange(NextObj(start), end);
         return start;
     }
-
-    return nullptr;
 }

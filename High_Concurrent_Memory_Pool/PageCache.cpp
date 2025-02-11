@@ -11,7 +11,7 @@ Span *PageCache::NewSpan(size_t k)
     }
 
     // 检查后面的桶有没有span，有的话进行切分
-    for (int i = k + 1; k < NPAGES; ++k)
+    for (int i = k + 1; i < NPAGES; ++i)
     {
         if (!_spanLists[i].Empty())
         {
