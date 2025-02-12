@@ -3,11 +3,9 @@
 #include "Comm.h"
 
 // 整个进程只有一个centalcache，使用单例模式
-class CentralCache
-{
+class CentralCache {
 public:
-    static CentralCache *GetInstance()
-    {
+    static CentralCache *GetInstance() {
         return &_sInst;
     }
 
@@ -16,9 +14,14 @@ public:
 
     size_t FetchRangeObj(void *&start, void *&end, size_t batchNum, size_t size);
 
+    // 接受Threadcache返回的内存
+    void ReleaseListToSpans(void *start, size_t size);
+
 private:
     SpanList _spanLists[NFREE_LIST];
+
     CentralCache() {}
+
     CentralCache(const CentralCache &) = delete;
 
 private:

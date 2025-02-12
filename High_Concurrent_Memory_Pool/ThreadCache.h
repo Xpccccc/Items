@@ -13,6 +13,9 @@ public:
     // 从Central Cache获取内存对象
     void *FetchFromCentralCache(size_t index, size_t size);
 
+    // 把批量内存还给central
+    void ListTooLong(FreeList &list, size_t size) ;
+
 private:
     FreeList _freeLists[NFREE_LIST];
 };

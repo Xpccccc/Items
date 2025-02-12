@@ -11,7 +11,7 @@ static void *ConcurrentAlloc(size_t size)
     {
         tls_ptr = new ThreadCache;
     }
-    std::cout << std::this_thread::get_id() << ":" << tls_ptr << std::endl;
+    std::cout << std::this_thread::get_id() << " : " << tls_ptr << std::endl;
     return tls_ptr->Allocate(size);
 }
 static void ConcurrentFree(void *ptr, size_t size)
