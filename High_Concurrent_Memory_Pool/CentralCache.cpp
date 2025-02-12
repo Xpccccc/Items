@@ -116,6 +116,5 @@ void CentralCache::ReleaseListToSpans(void *start, size_t size) {
         }
         start = next;
     }
-
     _spanLists[index]._mtx.unlock();
 }
