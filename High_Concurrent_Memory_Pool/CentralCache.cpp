@@ -23,6 +23,7 @@ Span *CentralCache::GetOneSpan(SpanList &list, size_t size) {
     PageCache::GetInstance()->_pageMtx.lock(); // 整体锁住
     Span *span = PageCache::GetInstance()->NewSpan(SizeClass::NumMovePage(size));
     span->_isUse = true;
+    span->_objSize = size;
     PageCache::GetInstance()->_pageMtx.unlock();
 
     // 这里不需要加锁，因为还没有把span挂上cental cache
@@ -41,6 +42,7 @@ Span *CentralCache::GetOneSpan(SpanList &list, size_t size) {
         start += size;
     }
 
+    NextObj(tail) = nullptr;
     // 切完了
     list._mtx.lock();   // 要挂上桶里面需要加锁，防止混乱插入拿取
     list.PushFront(span); // 插入到centalcache里面
@@ -116,5 +118,6 @@ void CentralCache::ReleaseListToSpans(void *start, size_t size) {
         }
         start = next;
     }
+
     _spanLists[index]._mtx.unlock();
 }

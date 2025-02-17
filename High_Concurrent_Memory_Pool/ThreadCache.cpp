@@ -7,6 +7,9 @@ void *ThreadCache::Allocate(size_t size) {
     size_t alignSize = SizeClass::RoundUp(size); // 确定对齐后的要申请的空间大小
     size_t index = SizeClass::Index(size);       // 获取哈希桶位置
     if (!_freeLists[index].Empty()) {
+//        if(_freeLists[index]._freeList == nullptr){
+//            int x = 0;
+//        }
         return _freeLists[index].Pop();
     } else {
         // ThreadCache没有该大小的内存对象
@@ -44,7 +47,7 @@ void *ThreadCache::FetchFromCentralCache(size_t index, size_t size) {
     size_t batchNum = std::min(_freeLists[index].MaxSize(),
                                SizeClass::NumMoveSize(size)); // 从centralcache要的size大小的内存个数,取小的
     if (_freeLists[index].MaxSize() == batchNum) {
-        _freeLists[index].MaxSize() += 1; // 自增，慢开始
+        _freeLists[index].MaxSize() *= 3; // 自增，慢开始
     }
     void *start = nullptr;
     void *end = nullptr;

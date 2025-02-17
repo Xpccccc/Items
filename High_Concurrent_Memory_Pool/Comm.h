@@ -53,6 +53,23 @@ inline static void *SystemAlloc(size_t kpage) {
     return ptr;
 }
 
+inline static void SystemFree(void *ptr, size_t kpage) {
+    if (ptr == nullptr) {
+        return;
+    }
+#ifdef _WIN32
+    // Windows使用VirtualFree释放内存，MEM_RELEASE需要大小参数为0
+    VirtualFree(ptr, 0, MEM_RELEASE);
+#else
+    // Linux/macOS使用munmap，需传入指针和分配时的大小
+    size_t size = kpage * 4 * 1024; // Linux/macOS的页大小计算为4KB
+    if (munmap(ptr, size) == -1) {
+        perror("munmap failed");
+        exit(EXIT_FAILURE);
+    }
+#endif
+}
+
 
 // 取对象的前4/8个字节的位置
 static void *&NextObj(void *obj) {
@@ -113,7 +130,7 @@ public:
 
 
 private:
-    void *_freeList;
+    void *_freeList = nullptr;
     size_t _maxSize = 1; // 每个桶都维护一个上一次要该内存大小的个数
     size_t _size = 0;
 };
@@ -137,8 +154,7 @@ public:
         } else if (size <= 256 * 1024) {
             return _RoundUp(size, 8 * 1024);
         } else {
-            assert(false);
-            return -1;
+            return _RoundUp(size, 1 << PAGE_SHIFT);
         }
     }
 
@@ -207,6 +223,7 @@ struct Span {
     size_t _useCount = 0;      // 切好的小块内存，分配给ThreadCache的个数
     void *_freeList = nullptr; // 切好的小块内存的自由链表
     bool _isUse = false;
+    size_t _objSize = 0;
 };
 
 // 带头双向循环链表

@@ -61,13 +61,13 @@ void TestConCurrent3() {
     std::cout << p4 << std::endl;
     std::cout << p5 << std::endl;
 
-    ConcurrentFree(p1, 6);
-    ConcurrentFree(p2, 8);
-    ConcurrentFree(p3, 1);
-    ConcurrentFree(p4, 7);
-    ConcurrentFree(p5, 8);
-    ConcurrentFree(p6, 8);
-    ConcurrentFree(p7, 8);
+//    ConcurrentFree(p1, 6);
+//    ConcurrentFree(p2, 8);
+//    ConcurrentFree(p3, 1);
+//    ConcurrentFree(p4, 7);
+//    ConcurrentFree(p5, 8);
+//    ConcurrentFree(p6, 8);
+//    ConcurrentFree(p7, 8);
 
 }
 
@@ -79,7 +79,7 @@ void MultiThread1() {
         v.push_back(p);
     }
     for (auto &e: v) {
-        ConcurrentFree(e, 6);
+//        ConcurrentFree(e, 6);
     }
 }
 
@@ -90,7 +90,7 @@ void MultiThread2() {
         v.push_back(p);
     }
     for (auto &e: v) {
-        ConcurrentFree(e, 7);
+//        ConcurrentFree(e, 7);
     }
 }
 
@@ -102,12 +102,31 @@ void TestMultiThread() {
     t2.join();
 }
 
+void BigAlloc() {
+    void *p1 = ConcurrentAlloc(257 * 1024);
+//    ConcurrentFree(p1, 257 * 1024);
+    void *p2 = ConcurrentAlloc(129 * 4 * 1024);
+//    ConcurrentFree(p2, 129 * 4 * 1024);
+
+}
+
+void BigAlloc1() {
+    void *p1 = ConcurrentAlloc(257 * 1024);
+    ConcurrentFree(p1);
+    void *p2 = ConcurrentAlloc(129 * 4 * 1024);
+    ConcurrentFree(p2);
+
+}
+
 int main() {
 //    TestTLS();
 //    TestConCurrent1();
 //    TestConCurrent2();
 //    TestConCurrent3();
-    TestMultiThread();
+//    TestMultiThread();
+
+//    BigAlloc();
+    BigAlloc1();
     return 0;
 
 }

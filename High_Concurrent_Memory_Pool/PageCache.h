@@ -2,6 +2,9 @@
 
 #include <unordered_map>
 #include "Comm.h"
+#include "ObjectPool.h"
+#include "PageMap.h"
+#include "Comm.h"
 
 class PageCache {
 public:
@@ -27,7 +30,11 @@ private:
 
     SpanList _spanLists[NPAGES]; // 分别有 1，2，3 ... 128 page 的span自由链表
 
-    std::unordered_map<PageId, Span *> _idSpanMap; // 页号映射对应的centralcache的Span位置
+//    std::unordered_map<PageId, Span *> _idSpanMap; // 页号映射对应的centralcache的Span位置
+    TCMalloc_PageMap3<64-PAGE_SHIFT> _idSpanMap; // 页号映射对应的centralcache的Span位置
+
+    ObjectPool<Span> _spanPool;// 定长内存池，用来申请，替换new
+
 public:
     std::mutex _pageMtx;
 };
